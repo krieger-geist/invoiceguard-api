@@ -1,30 +1,33 @@
 # InvoiceGuard API
 
-**A secure, multi-tenant invoice-risk analysis platform** that detects duplicate invoices, suspicious vendor activity, altered bank details, unusual amounts, tax mismatches, missing purchase orders, and possible fraud — before payment is approved, not after.
+InvoiceGuard is a secure backend application that helps businesses spot risky invoices **before money is paid**. It checks for duplicate invoices, unusual amounts, unverified vendors, changed bank details, missing purchase orders, tax mismatches, and other signs of possible fraud.
+
+It is built as a realistic portfolio project: a business can create an organisation, add vendors and invoices, run a risk check, and follow an approval process before an invoice is paid.
+
+**Live API health check:** [invoiceguard-api-e477.onrender.com/actuator/health/liveness](https://invoiceguard-api-e477.onrender.com/actuator/health/liveness)
+**Interactive API demo (Swagger):** [Open Swagger UI](https://invoiceguard-api-e477.onrender.com/swagger-ui.html)
 
 ---
 
-## The problem
+## Why this project matters
 
-Business Email Compromise and invoice fraud cost organizations billions of dollars a year, and the damage is concentrated in exactly the failure modes this project targets: duplicate/altered invoices, vendor bank-detail changes, and weak or bypassed approval controls. Once a fraudulent payment is wired, it's usually unrecoverable within hours — which is why InvoiceGuard is built to intervene **before** approval, not to reconcile after the fact.
+Invoice fraud often looks ordinary at first: a familiar vendor sends a duplicate bill, a bank account is quietly changed, or an invoice amount is slightly higher than usual. By the time a suspicious payment is discovered, it can be difficult or impossible to recover.
 
-## Features
+InvoiceGuard focuses on prevention. Instead of only recording what happened after a payment, it gives reviewers useful warnings and a clear approval trail before payment is approved.
 
-- **Multi-tenant organizations** with complete data isolation, enforced at both the service and repository layers
-- **JWT authentication** (short-lived access tokens + rotating opaque refresh tokens with theft detection) and **API keys** for machine-to-machine access
-- **Role- and permission-based authorization** across 7 roles and 20+ fine-grained permissions
-- **Vendor management** with a verification workflow and an approval-required bank-account-change process
-- **Invoice management** with idempotent creation, full-text/amount/date search, and financial validation (`subtotal + tax − discount = total`, everything in `BigDecimal`)
-- **A 21-rule explainable risk engine** — deterministic, auditable, and organisation-configurable — covering exact/near-duplicate detection, statistical anomaly detection, vendor trust signals, and behavioral patterns
-- **Optional Gemini AI integration** for plain-language risk summaries — the system is fully functional with AI disabled, and AI never makes an approval/rejection decision
-- **Multi-level approval workflow** with amount-tiered policies, segregation-of-duties enforcement, and risk-gated permissions
-- **Alerts, audit logging, and webhooks** — all driven by the same set of Spring Application Events
-- **Redis-backed rate limiting, caching, and access-token revocation**
-- **Analytics** via hand-optimized aggregate SQL
+## What InvoiceGuard can do
 
-## Architecture
+- Keeps each organisation's data separate, so one company's users cannot access another company's invoices.
+- Uses JWT login, refresh tokens, API keys, and role-based permissions to protect the API.
+- Lets teams manage vendors, verify them, and require approval before bank-account details change.
+- Creates and searches invoices safely, including duplicate-request protection and financial checks such as `subtotal + tax − discount = total`.
+- Runs an explainable **21-rule risk engine** for exact and near duplicates, unusual amounts, vendor trust signals, and suspicious patterns.
+- Supports optional Gemini AI summaries. AI explains risk in plain language, but it never makes an approval decision.
+- Supports multi-level approvals, alerts, audit history, signed webhooks, rate limiting, caching, and analytics.
 
-InvoiceGuard is a **modular monolith** using **package-by-feature** organization — one deployable Spring Boot application, internally split into self-contained feature modules (`auth`, `vendor`, `invoice`, `risk`, `approval`, `alert`, `audit`, `analytics`, `integration`) that communicate primarily through Spring Application Events rather than direct dependencies.
+## How it is organised
+
+InvoiceGuard is one Spring Boot application, split into focused modules such as authentication, vendors, invoices, risk checks, approvals, alerts, and analytics. This keeps it simple to deploy while keeping the code organised as the project grows. Modules communicate through Spring application events where that makes sense, instead of being tightly coupled.
 
 ```mermaid
 graph TB
@@ -82,7 +85,7 @@ stateDiagram-v2
     PAID --> ARCHIVED
 ```
 
-For an in-depth explanation of *why* each architectural decision was made (not just what it is), see [`docs/ARCHITECTURE_PHASE_1_2.md`](docs/) — the phase-by-phase build log this project was generated from goes into significant depth on the base classes, JWT lifecycle, and tenant-isolation pattern.
+For a deeper explanation of the design decisions, see [`docs/ARCHITECTURE_PHASE_1_2.md`](docs/). It covers the base classes, JWT lifecycle, and tenant-isolation approach.
 
 ## Technology stack
 
@@ -128,7 +131,7 @@ com.invoiceguard
 
 Every organisation-scoped table carries an indexed `organization_id` column (the tenant-isolation backbone) plus the standard audit columns (`version`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted`). Hibernate's `ddl-auto` is `validate` in every profile — Flyway migrations are the *only* source of schema truth.
 
-## Setup requirements
+## What you need to run it locally
 
 - Java 21
 - Maven 3.9+ (or use the included wrapper conventions)
@@ -147,7 +150,7 @@ See [`.env.example`](.env.example) for the full list. The essentials to get runn
 | `BANK_ACCOUNT_ENCRYPTION_KEY` | Yes | Base64 32-byte AES-256 key. Generate: `openssl rand -base64 32` |
 | `AI_INTEGRATION_ENABLED`, `AI_PROVIDER`, `GEMINI_API_KEY` | No | App is fully functional with AI disabled (the default) |
 
-## Running locally (without Docker)
+## Run locally without Docker
 
 ```bash
 # 1. Start Postgres and Redis however you prefer, then:
@@ -165,7 +168,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
 The app starts on `http://localhost:8080`. Swagger UI is at `http://localhost:8080/swagger-ui.html`.
 
-## Running with Docker
+## Run with Docker
 
 ```bash
 # Production-like stack
@@ -176,7 +179,7 @@ docker compose up --build
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-## Sample users (dev seed data)
+## Demo users and data
 
 When run with `invoiceguard.seed.enabled=true` (the `dev` profile default), the app creates one demo organisation with three users, all password `Demo1234!`:
 
@@ -186,9 +189,9 @@ When run with `invoiceguard.seed.enabled=true` (the `dev` profile default), the 
 | `analyst@demo.invoiceguard.io` | ANALYST |
 | `reviewer@demo.invoiceguard.io` | REVIEWER |
 
-Plus two vendors (one verified with an approved bank account, one unverified) and four invoices left in `SUBMITTED` status — including an intentional exact-duplicate pair — so you can call `POST /invoices/{id}/analyse` and watch the risk engine produce findings live.
+The app also creates two vendors (one verified and one unverified) and four invoices in `SUBMITTED` status. One pair is intentionally duplicated, so you can call `POST /invoices/{id}/analyse` and show the risk engine finding the issue during a demo.
 
-## Sample API requests
+## Try the API
 
 ```bash
 # Register (creates org + admin user, returns tokens directly)
@@ -209,7 +212,7 @@ curl -X POST http://localhost:8080/api/v1/invoices/$INVOICE_ID/analyse -H "Autho
 
 A full [Postman collection](postman/InvoiceGuard.postman_collection.json) covering every module is included.
 
-## Testing
+## Testing the project
 
 ```bash
 mvn test                                    # everything
@@ -220,7 +223,7 @@ mvn test -Dtest='**/*IntegrationTest'       # integration tests (needs Docker fo
 - **Unit tests**: invoice-number normalization, string similarity, duplicate detection, vendor statistics (mean/median/stddev), individual risk rules, tax/total validation, invoice/vendor state-transition rules, approval-policy resolution, idempotency hashing, JWT issuance/validation/blacklisting, and role-permission mappings.
 - **Integration tests** (Testcontainers — real PostgreSQL + Redis, not H2): full auth lifecycle (register → login → protected endpoint → refresh → logout-revokes-token), cross-tenant data isolation, and invoice idempotency-key replay/conflict behavior.
 
-## Security notes
+## Security choices
 
 - Passwords: BCrypt. Refresh tokens, password-reset tokens, email-verification tokens, and API keys: SHA-256 hashed, opaque, shown once at issuance.
 - Bank account numbers: AES-256-GCM encrypted at rest; API responses only ever show a masked value.
@@ -229,7 +232,7 @@ mvn test -Dtest='**/*IntegrationTest'       # integration tests (needs Docker fo
 - Rate limiting fails open (Redis outage never blocks the whole API); caching fails open the same way.
 - No stack traces are ever returned to API clients — every error is the standard `{success:false, code, message, ...}` shape.
 
-## Roadmap
+## Future improvements
 
 - Full OCR-based document extraction (`InvoiceDocumentExtractionService` interface exists, no implementation yet)
 - Per-API-key rate limit enforcement (column exists, not yet wired into the limiter)
@@ -240,3 +243,7 @@ mvn test -Dtest='**/*IntegrationTest'       # integration tests (needs Docker fo
 ## License
 
 Apache 2.0
+
+## Created by
+
+**Manas Surayavnshi**
