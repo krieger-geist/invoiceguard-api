@@ -1,0 +1,20 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    clean-disabled: false
+
+invoiceguard:
+  jwt:
+    secret: test-only-secret-key-not-for-production-use-0123456789
+  security:
+    bank-account-encryption-key: OBfc+gsprhGE+z5wnmhAz5zsk4GuPvTJDub0lT5rEHg=
+  seed:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.invoiceguard: INFO

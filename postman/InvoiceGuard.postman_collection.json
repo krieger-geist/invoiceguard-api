@@ -1,0 +1,260 @@
+{
+  "info": {
+    "name": "InvoiceGuard API",
+    "description": "Secure, multi-tenant invoice-risk analysis platform. Set the {{baseUrl}} variable and run 'Register' first to populate {{accessToken}} and {{refreshToken}} automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "vendorId", "value": "" },
+    { "key": "invoiceId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register (creates org + admin user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json().data;",
+                  "pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "pm.collectionVariables.set('refreshToken', data.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organizationName\": \"Acme Corp\",\n  \"email\": \"admin@acme-{{$randomInt}}.example.com\",\n  \"password\": \"SuperSecret123\",\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json().data;",
+                  "pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "pm.collectionVariables.set('refreshToken', data.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@acme.example.com\",\n  \"password\": \"SuperSecret123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/logout",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organizations & Users",
+      "item": [
+        { "name": "Get my organization", "request": { "method": "GET", "url": "{{baseUrl}}/organizations/me" } },
+        { "name": "Get my user profile", "request": { "method": "GET", "url": "{{baseUrl}}/users/me" } },
+        { "name": "List organization members", "request": { "method": "GET", "url": "{{baseUrl}}/organizations/members" } }
+      ]
+    },
+    {
+      "name": "Vendors",
+      "item": [
+        {
+          "name": "Create vendor",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.collectionVariables.set('vendorId', pm.response.json().data.id);"] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/vendors",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"legalName\": \"Northwind Supplies Ltd\",\n  \"email\": \"billing@northwind.example.com\",\n  \"country\": \"US\"\n}"
+            }
+          }
+        },
+        { "name": "List vendors", "request": { "method": "GET", "url": "{{baseUrl}}/vendors?page=0&size=20" } },
+        { "name": "Get vendor by ID", "request": { "method": "GET", "url": "{{baseUrl}}/vendors/{{vendorId}}" } },
+        {
+          "name": "Verify vendor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/vendors/{{vendorId}}/verify",
+            "body": { "mode": "raw", "raw": "{\n  \"targetStatus\": \"VERIFIED\"\n}" }
+          }
+        },
+        {
+          "name": "Submit bank change request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/vendors/{{vendorId}}/bank-change-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountHolderName\": \"Northwind Supplies Ltd\",\n  \"accountNumber\": \"000123456789\",\n  \"bankName\": \"First National Bank\",\n  \"routingCode\": \"FNBKUS31\",\n  \"accountType\": \"CHECKING\"\n}"
+            }
+          }
+        },
+        { "name": "List bank accounts", "request": { "method": "GET", "url": "{{baseUrl}}/vendors/{{vendorId}}/bank-accounts" } }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Create invoice (with Idempotency-Key)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.collectionVariables.set('invoiceId', pm.response.json().data.id);"] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "url": "{{baseUrl}}/invoices",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceNumber\": \"INV-1001\",\n  \"vendorId\": \"{{vendorId}}\",\n  \"invoiceDate\": \"2026-06-01\",\n  \"currency\": \"USD\",\n  \"subtotal\": \"1000.00\",\n  \"taxAmount\": \"90.00\",\n  \"totalAmount\": \"1090.00\",\n  \"purchaseOrderNumber\": \"PO-5521\",\n  \"description\": \"Office supplies\"\n}"
+            }
+          }
+        },
+        { "name": "List / search invoices", "request": { "method": "GET", "url": "{{baseUrl}}/invoices?status=DRAFT&page=0&size=20" } },
+        { "name": "Get invoice by ID", "request": { "method": "GET", "url": "{{baseUrl}}/invoices/{{invoiceId}}" } },
+        { "name": "Submit invoice", "request": { "method": "POST", "url": "{{baseUrl}}/invoices/{{invoiceId}}/submit" } },
+        { "name": "Analyse invoice (run risk engine)", "request": { "method": "POST", "url": "{{baseUrl}}/invoices/{{invoiceId}}/analyse" } },
+        { "name": "Get risk assessment", "request": { "method": "GET", "url": "{{baseUrl}}/invoices/{{invoiceId}}/risk-assessment" } },
+        {
+          "name": "Approve invoice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/invoices/{{invoiceId}}/approve",
+            "body": { "mode": "raw", "raw": "{\n  \"comments\": \"Looks good\"\n}" }
+          }
+        },
+        {
+          "name": "Reject invoice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/invoices/{{invoiceId}}/reject",
+            "body": { "mode": "raw", "raw": "{\n  \"comments\": \"Duplicate of a prior invoice\"\n}" }
+          }
+        },
+        { "name": "Get invoice history", "request": { "method": "GET", "url": "{{baseUrl}}/invoices/{{invoiceId}}/history" } }
+      ]
+    },
+    {
+      "name": "Risk Rules",
+      "item": [
+        { "name": "List rule configuration", "request": { "method": "GET", "url": "{{baseUrl}}/risk-rules" } },
+        {
+          "name": "Update a rule",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/risk-rules/UNUSUAL_AMOUNT",
+            "body": { "mode": "raw", "raw": "{\n  \"enabled\": true,\n  \"weightPoints\": 20\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        { "name": "List alerts", "request": { "method": "GET", "url": "{{baseUrl}}/alerts?status=OPEN" } }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        { "name": "Summary", "request": { "method": "GET", "url": "{{baseUrl}}/analytics/summary" } },
+        { "name": "Risk distribution", "request": { "method": "GET", "url": "{{baseUrl}}/analytics/risk-distribution" } },
+        { "name": "Vendor risk", "request": { "method": "GET", "url": "{{baseUrl}}/analytics/vendor-risk" } }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        { "name": "List audit logs", "request": { "method": "GET", "url": "{{baseUrl}}/audit-logs" } }
+      ]
+    },
+    {
+      "name": "API Keys & Webhooks",
+      "item": [
+        {
+          "name": "Create API key",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api-keys",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"CI integration\",\n  \"scopes\": [\"INVOICE_READ\", \"VENDOR_READ\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Create webhook subscription",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/webhooks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/webhooks/invoiceguard\",\n  \"eventTypes\": [\"invoice.approved\", \"invoice.rejected\"],\n  \"active\": true\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

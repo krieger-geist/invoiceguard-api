@@ -1,0 +1,135 @@
+spring:
+  application:
+    name: invoiceguard-api
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/invoiceguard}
+    username: ${DB_USERNAME:invoiceguard}
+    password: ${DB_PASSWORD:invoiceguard}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+        default_batch_fetch_size: 25
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:false}
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+  servlet:
+    multipart:
+      max-file-size: ${DOCUMENT_MAX_FILE_SIZE_MB:20}MB
+      max-request-size: ${DOCUMENT_MAX_FILE_SIZE_MB:20}MB
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+invoiceguard:
+  jwt:
+    secret: ${JWT_SECRET:}
+    access-token-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}
+    refresh-token-ttl-days: ${JWT_REFRESH_TTL_DAYS:7}
+    issuer: invoiceguard-api
+  security:
+    max-failed-login-attempts: ${MAX_FAILED_LOGIN_ATTEMPTS:5}
+    account-lock-minutes: ${ACCOUNT_LOCK_MINUTES:15}
+    bank-account-encryption-key: ${BANK_ACCOUNT_ENCRYPTION_KEY:}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  rate-limit:
+    default-requests-per-minute: ${RATE_LIMIT_RPM:120}
+  ai:
+    enabled: ${AI_INTEGRATION_ENABLED:false}
+    provider: ${AI_PROVIDER:none}
+    api-key: ${AI_API_KEY:${GEMINI_API_KEY:}}
+    model: ${AI_MODEL:gemini-2.0-flash}
+    timeout-ms: ${AI_TIMEOUT_MS:8000}
+  documents:
+    local-storage-path: ${DOCUMENT_STORAGE_PATH:./data/documents}
+    max-file-size-mb: ${DOCUMENT_MAX_FILE_SIZE_MB:20}
+  approval:
+    overdue-hours: ${APPROVAL_OVERDUE_HOURS:48}
+    overdue-check-interval-ms: ${APPROVAL_OVERDUE_CHECK_INTERVAL_MS:3600000}
+  webhook:
+    max-attempts: ${WEBHOOK_MAX_ATTEMPTS:6}
+    timeout-ms: ${WEBHOOK_TIMEOUT_MS:5000}
+    retry-check-interval-ms: ${WEBHOOK_RETRY_CHECK_INTERVAL_MS:60000}
+  risk:
+    thresholds:
+      low-max: ${RISK_THRESHOLD_LOW_MAX:29}
+      medium-max: ${RISK_THRESHOLD_MEDIUM_MAX:59}
+      high-max: ${RISK_THRESHOLD_HIGH_MAX:79}
+    min-statistical-sample-size: ${RISK_MIN_SAMPLE_SIZE:5}
+    unusual-amount-z-score-threshold: ${RISK_UNUSUAL_AMOUNT_Z_SCORE:2.5}
+    tax-mismatch-tolerance-percentage-points: ${RISK_TAX_MISMATCH_TOLERANCE:5}
+    old-invoice-date-days: ${RISK_OLD_INVOICE_DAYS:180}
+    business-hour-start: ${RISK_BUSINESS_HOUR_START:8}
+    business-hour-end: ${RISK_BUSINESS_HOUR_END:19}
+    recent-bank-change-window-days: ${RISK_BANK_CHANGE_WINDOW_DAYS:90}
+    vendor-recently-created-days: ${RISK_VENDOR_RECENT_DAYS:30}
+    rapid-repeat-window-minutes: ${RISK_RAPID_REPEAT_WINDOW_MINUTES:5}
+    high-risk-countries: ${RISK_HIGH_RISK_COUNTRIES:}
+    free-email-domains: ${RISK_FREE_EMAIL_DOMAINS:gmail.com,yahoo.com,hotmail.com,outlook.com,aol.com,protonmail.com,icloud.com}
+    duplicate:
+      near-duplicate-threshold: ${RISK_NEAR_DUPLICATE_THRESHOLD:60}
+      window-days: ${RISK_DUPLICATE_WINDOW_DAYS:30}
+      amount-tolerance-percent: ${RISK_DUPLICATE_AMOUNT_TOLERANCE_PERCENT:2}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+  health:
+    readinessstate:
+      enabled: true
+    livenessstate:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

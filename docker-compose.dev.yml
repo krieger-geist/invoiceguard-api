@@ -1,0 +1,17 @@
+services:
+  app:
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-do-not-use-in-production-0123456789}
+      BANK_ACCOUNT_ENCRYPTION_KEY: ${BANK_ACCOUNT_ENCRYPTION_KEY:-OBfc+gsprhGE+z5wnmhAz5zsk4GuPvTJDub0lT5rEHg=}
+      MAIL_HOST: mailhog
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+      - "5005:5005" # remote debug port, if enabled via JAVA_TOOL_OPTIONS
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: invoiceguard-mailhog
+    ports:
+      - "1025:1025"   # SMTP — the app connects here
+      - "8025:8025"   # web UI — you read the emails here

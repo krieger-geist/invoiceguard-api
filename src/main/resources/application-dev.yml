@@ -1,0 +1,22 @@
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    clean-disabled: false
+
+logging:
+  level:
+    root: INFO
+    com.invoiceguard: DEBUG
+    org.hibernate.SQL: DEBUG
+
+invoiceguard:
+  seed:
+    enabled: true
+
+springdoc:
+  swagger-ui:
+    enabled: true

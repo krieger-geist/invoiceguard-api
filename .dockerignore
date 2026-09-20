@@ -1,0 +1,11 @@
+
+.git/
+.github/
+*.md
+.env
+.idea/
+*.iml
+.vscode/
+data/
+postman/
+!target/invoiceguard-api.jar

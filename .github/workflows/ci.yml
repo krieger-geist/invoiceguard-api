@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    # Docker is preinstalled on GitHub-hosted runners, so Testcontainers-backed
+    # integration tests work here with no extra setup — no "services:" block needed.
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Check formatting (compile-time validation)
+        run: mvn -B validate
+
+      - name: Compile
+        run: mvn -B compile
+
+      - name: Run unit tests
+        run: mvn -B test -Dtest='!**/*IntegrationTest' -DfailIfNoTests=false
+
+      - name: Run integration tests
+        run: mvn -B test -Dtest='**/*IntegrationTest' -DfailIfNoTests=false
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "false"
+
+      - name: Build JAR
+        run: mvn -B package -DskipTests
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: invoiceguard-api-jar
+          path: target/invoiceguard-api.jar
+          retention-days: 7
+
+  build-docker-image:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: invoiceguard-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

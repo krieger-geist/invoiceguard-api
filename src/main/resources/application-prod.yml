@@ -1,0 +1,33 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    clean-disabled: true
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+
+logging:
+  level:
+    root: WARN
+    com.invoiceguard: INFO
+    org.hibernate.SQL: WARN
+
+invoiceguard:
+  seed:
+    enabled: false
+
+springdoc:
+  swagger-ui:
+    enabled: ${SWAGGER_UI_ENABLED:false}
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}
+
+management:
+  endpoint:
+    health:
+      show-details: never
