@@ -112,7 +112,9 @@ public class InvoiceService {
             if (existing.isPresent()) {
                 idempotencyService.assertMatches(existing.get(), requestHash);
                 Invoice invoice = getOwnedById(existing.get().getResponseReference());
-                return new InvoiceCreationOutcome(invoice, existing.get().getHttpStatus(), true);
+                // The original request created the resource (201). A replay
+                // creates nothing, so it returns the saved resource as 200.
+                return new InvoiceCreationOutcome(invoice, 200, true);
             }
 
             Invoice created = createInternal(request, organizationId, idempotencyKey);
