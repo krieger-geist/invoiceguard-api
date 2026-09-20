@@ -244,6 +244,6 @@ mvn test -Dtest='**/*IntegrationTest'       # integration tests (needs Docker fo
 
 Apache 2.0
 
-## Created by
+## Designed and developed by
 
 **Manas Surayavnshi**
